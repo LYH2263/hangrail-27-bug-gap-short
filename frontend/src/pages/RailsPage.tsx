@@ -41,9 +41,8 @@ export default function RailsPage() {
 
 
 function listedLeaveCm(raw: string) {
+  // 上杆留白即登记缓冲本身，与落位引擎、占位图量距同源。
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return 0;
-  if (n >= 20) return 1;
-  if (n >= 5) return 1;
-  return 1;
+  return n;
 }

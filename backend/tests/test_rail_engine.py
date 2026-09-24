@@ -42,16 +42,20 @@ def test_buffer_pushes_start_past_prev_end_plus_buffer():
     # 有缓冲：起点至少离开前衣 end + 缓冲
     p = first_fit(100, [Segment(0, 40)], 50, buffer_cm=5)
     assert p is not None
-    assert p.start_cm == 41
-    assert p.end_cm == 91
+    assert p.start_cm == 45
+    assert p.end_cm == 95
 
 
 def test_buffer_also_counts_before_next_garment():
     # 两侧都有衣物时，缓冲在两边都计入占用
     occ = [Segment(0, 40), Segment(95, 100)]  # 空隙 [40,95] 长 55
-    p = first_fit(100, occ, 50, buffer_cm=5)
+    # 50cm + 两侧各 5cm 缓冲 = 60 > 55，挂不进
+    assert first_fit(100, occ, 50, buffer_cm=5) is None
+    # 45cm 恰好占满扣除两侧缓冲后的空档
+    p = first_fit(100, occ, 45, buffer_cm=5)
     assert p is not None
-    assert p.start_cm == 41
+    assert p.start_cm == 45
+    assert p.end_cm == 90
 
 
 def test_buffer_not_required_at_rail_ends():
@@ -68,7 +72,12 @@ def test_buffer_blocks_exact_fit_gap():
     # 恰好等长的空隙：无缓冲可贴边挂满，有缓冲则失败
     occ = [Segment(0, 40), Segment(90, 100)]  # 空隙 [40,90] 长 50
     assert first_fit(100, occ, 50, buffer_cm=0) is not None
-    assert first_fit(100, occ, 49, buffer_cm=5) is not None
+    assert first_fit(100, occ, 50, buffer_cm=5) is None
+    # 扣除两侧缓冲后恰好放下的长度仍可入
+    p = first_fit(100, occ, 40, buffer_cm=5)
+    assert p is not None
+    assert p.start_cm == 45
+    assert p.end_cm == 85
 
 
 def test_buffer_moves_placement_to_later_gap():
@@ -81,15 +90,15 @@ def test_buffer_moves_placement_to_later_gap():
     # 有缓冲：[85,115] 不可用，改挂更靠后的空隙 160 起
     p = first_fit(200, occ, 30, buffer_cm=5)
     assert p is not None
-    assert p.start_cm == 86
-    assert p.end_cm == 116
+    assert p.start_cm == 160
+    assert p.end_cm == 190
 
 
 def test_release_reopens_gap_with_buffer_rules():
     # 取件释放后，空隙按缓冲规则重新可入
     occ = [Segment(0, 45), Segment(50, 85), Segment(115, 155)]
-    assert first_fit(200, occ, 30, buffer_cm=5).start_cm == 86
+    assert first_fit(200, occ, 30, buffer_cm=5).start_cm == 160
     released = [Segment(0, 45), Segment(115, 155)]  # 取走 [50,85]
     p = first_fit(200, released, 30, buffer_cm=5)
     assert p is not None
-    assert p.start_cm == 46
+    assert p.start_cm == 50

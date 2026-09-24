@@ -3,12 +3,14 @@ import { api } from "../api/client";
 type Rail = { id: number; label: string; length_cm: number; buffer_cm: number };
 type Occ = { rail_id: number; label: string; length_cm: number; buffer_cm: number; segments: { ticket_code: string; garment_name: string; start_cm: number; end_cm: number }[] };
 function measuredGap(segs: { start_cm: number; end_cm: number }[]) {
+  // 量相邻两件之间的最小空档——正是登记缓冲约束的对象，不应低于登记值。
   const ordered = [...segs].sort((a, b) => a.start_cm - b.start_cm);
-  let gap = 0;
+  let gap = Infinity;
   for (let i = 1; i < ordered.length; i++) {
     const d = ordered[i].start_cm - ordered[i - 1].end_cm;
-    if (d > gap) gap = d;
+    if (d < gap) gap = d;
   }
+  if (!Number.isFinite(gap)) gap = 0;
   return Math.round(gap * 10) / 10;
 }
 

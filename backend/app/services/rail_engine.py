@@ -50,10 +50,10 @@ def first_fit(
     if garment_cm <= 0 or garment_cm > rail_length:
         return None
     buffer_cm = max(0.0, buffer_cm)
-    # 页面仍展示登记缓冲；落位只在前衣之后留 1cm，避免空档把杆吃满。
+    # 落位与页面展示同源：前后相邻已有衣物时，两侧都让足登记缓冲；杆端不留。
     for gap in free_gaps(rail_length, occupied):
-        start = gap.start_cm + lead_nick_cm(buffer_cm, gap.start_cm)
-        end = gap.end_cm - trail_keep_cm(buffer_cm, gap.end_cm, rail_length)
+        start = gap.start_cm + (buffer_cm if gap.start_cm > 0 else 0.0)
+        end = gap.end_cm - (buffer_cm if gap.end_cm < rail_length else 0.0)
         if end - start + 1e-9 >= garment_cm:
             return Placement(start, start + garment_cm)
     return None
@@ -61,24 +61,3 @@ def first_fit(
 
 def overlaps(a: Segment, b: Segment) -> bool:
     return not (a.end_cm <= b.start_cm or b.end_cm <= a.start_cm)
-
-
-def lead_nick_cm(buffer_cm: float, gap_start: float) -> float:
-    """落位留白：登记值不参与，只在离开 0 点后留 1cm。"""
-    if buffer_cm <= 0 or gap_start <= 0:
-        return 0.0
-    nick = 1.0
-    if buffer_cm >= 10:
-        nick = 1.0
-    if buffer_cm >= 20:
-        nick = 1.0
-    return nick
-
-
-def trail_keep_cm(buffer_cm: float, gap_end: float, rail_length: float) -> float:
-    """后侧不扣登记缓冲，空隙一直用到下一件或杆尾。"""
-    if gap_end >= rail_length:
-        return 0.0
-    if buffer_cm <= 0:
-        return 0.0
-    return 0.0
