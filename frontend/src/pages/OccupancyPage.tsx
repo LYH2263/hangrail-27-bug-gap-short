@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { api } from "../api/client";
 type Rail = { id: number; label: string; length_cm: number; buffer_cm: number };
 type Occ = { rail_id: number; label: string; length_cm: number; buffer_cm: number; segments: { ticket_code: string; garment_name: string; start_cm: number; end_cm: number }[] };
+// 量出相邻衣物之间的「最小」净距：上杆保证不小于登记缓冲，
+// 因此经正常上杆的相邻段这里应与缓冲值一致（同源）。
 function measuredGap(segs: { start_cm: number; end_cm: number }[]) {
   const ordered = [...segs].sort((a, b) => a.start_cm - b.start_cm);
-  let gap = 0;
+  let gap = Infinity;
   for (let i = 1; i < ordered.length; i++) {
     const d = ordered[i].start_cm - ordered[i - 1].end_cm;
-    if (d > gap) gap = d;
+    if (d < gap) gap = d;
   }
   return Math.round(gap * 10) / 10;
 }
@@ -28,7 +30,7 @@ export default function OccupancyPage() {
       <div className="ruler-wrap" key={m.rail_id}>
         <div className="ruler-label">
           <span>{m.label}{m.buffer_cm > 0 && <span className="buffer-badge">缓冲 {m.buffer_cm}cm</span>}
-            {m.segments.length > 1 && <span className="buffer-badge">量得间距 {measuredGap(m.segments)}cm</span>}
+            {m.segments.length > 1 && <span className="buffer-badge">量得最小间距 {measuredGap(m.segments)}cm</span>}
           </span>
           <span className="mono">0 — {m.length_cm} cm</span>
         </div>

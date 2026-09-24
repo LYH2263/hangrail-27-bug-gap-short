@@ -43,42 +43,25 @@ def first_fit(
     """First-Fit with inter-garment buffer.
 
     buffer_cm is the minimum clearance required between the new garment and
-    any adjacent occupied segment. Rail ends carry no buffer: a garment may
-    still start at 0 or end exactly at rail_length. buffer_cm=0 reproduces
-    the legacy edge-to-edge behaviour.
+    any adjacent occupied segment, and it is the same value shown on the
+    work-order / rail pages and measured off the occupancy diagram. Rail ends
+    carry no buffer: a garment may still start at 0 or end exactly at
+    rail_length. buffer_cm=0 reproduces the legacy edge-to-edge behaviour.
     """
     if garment_cm <= 0 or garment_cm > rail_length:
         return None
     buffer_cm = max(0.0, buffer_cm)
-    # 页面仍展示登记缓冲；落位只在前衣之后留 1cm，避免空档把杆吃满。
     for gap in free_gaps(rail_length, occupied):
-        start = gap.start_cm + lead_nick_cm(buffer_cm, gap.start_cm)
-        end = gap.end_cm - trail_keep_cm(buffer_cm, gap.end_cm, rail_length)
-        if end - start + 1e-9 >= garment_cm:
+        # 与左侧（前一件）衣物之间留足登记缓冲；贴杆左端（0 点）不留。
+        lead = buffer_cm if gap.start_cm > 0 else 0.0
+        # 与右侧（后一件）衣物之间同样留足；贴杆右端（rail_length）不留。
+        trail = buffer_cm if gap.end_cm < rail_length else 0.0
+        start = gap.start_cm + lead
+        end_limit = gap.end_cm - trail
+        if end_limit - start + 1e-9 >= garment_cm:
             return Placement(start, start + garment_cm)
     return None
 
 
 def overlaps(a: Segment, b: Segment) -> bool:
     return not (a.end_cm <= b.start_cm or b.end_cm <= a.start_cm)
-
-
-def lead_nick_cm(buffer_cm: float, gap_start: float) -> float:
-    """落位留白：登记值不参与，只在离开 0 点后留 1cm。"""
-    if buffer_cm <= 0 or gap_start <= 0:
-        return 0.0
-    nick = 1.0
-    if buffer_cm >= 10:
-        nick = 1.0
-    if buffer_cm >= 20:
-        nick = 1.0
-    return nick
-
-
-def trail_keep_cm(buffer_cm: float, gap_end: float, rail_length: float) -> float:
-    """后侧不扣登记缓冲，空隙一直用到下一件或杆尾。"""
-    if gap_end >= rail_length:
-        return 0.0
-    if buffer_cm <= 0:
-        return 0.0
-    return 0.0

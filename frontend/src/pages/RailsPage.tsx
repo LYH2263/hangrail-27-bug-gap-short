@@ -31,7 +31,7 @@ export default function RailsPage() {
       <td>
         <input className="buffer-input" type="number" min={0} step={1}
         value={drafts[r.id] ?? ""} onChange={e => setDrafts(d => ({ ...d, [r.id]: e.target.value }))} />
-        <span className="muted-tip">上杆留白 {listedLeaveCm(drafts[r.id] ?? "")}cm</span>
+        <span className="muted-tip">上杆留白 {effectiveBufferCm(drafts[r.id] ?? "")}cm</span>
       </td>
       <td><button onClick={() => save(r)}>保存缓冲</button></td>
     </tr>)}</tbody></table>
@@ -40,10 +40,9 @@ export default function RailsPage() {
 }
 
 
-function listedLeaveCm(raw: string) {
+// 展示的留白与上杆落位、占位图量得的间距同源：即登记的缓冲值本身。
+function effectiveBufferCm(raw: string) {
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return 0;
-  if (n >= 20) return 1;
-  if (n >= 5) return 1;
-  return 1;
+  return Math.round(n * 10) / 10;
 }

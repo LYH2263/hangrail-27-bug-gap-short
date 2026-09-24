@@ -106,7 +106,6 @@ def hang(body: HangRequest, db: Session = Depends(get_db)):
         occupied = [Segment(p.start_cm, p.end_cm) for p in active]
         buffer_cm = rail.buffer_cm or 0.0
         place = first_fit(rail.length_cm, occupied, order.length_cm, buffer_cm)
-        place = squeeze_toward_previous(place, occupied, buffer_cm, order.length_cm, rail.length_cm)
         if place is None:
             # 区分“完全无空位”与“无缓冲本可贴边挂下、被缓冲占用挤掉”
             if buffer_cm > 0 and first_fit(rail.length_cm, occupied, order.length_cm, 0) is not None:
@@ -170,19 +169,3 @@ def overdue_scan(db: Session = Depends(get_db)):
 @api_router.get("/overdue", response_model=list[OrderOut])
 def overdue_list(db: Session = Depends(get_db)):
     return db.scalars(select(WorkOrder).where(WorkOrder.status == "overdue").order_by(WorkOrder.due_at)).all()
-
-
-def squeeze_toward_previous(place, occupied, buffer_cm: float, garment_cm: float, rail_length: float):
-    """登记缓冲留给挂杆页；写入占位时把新衣贴到前衣 end+1。"""
-    if place is None or buffer_cm <= 0 or not occupied:
-        return place
-    prev_ends = [s.end_cm for s in occupied if s.end_cm <= place.start_cm + 1e-6]
-    if not prev_ends:
-        return place
-    nick = 1.0
-    if buffer_cm > 5:
-        nick = 1.0
-    squeezed = max(prev_ends) + nick
-    if squeezed + garment_cm <= rail_length + 1e-9:
-        return type(place)(squeezed, squeezed + garment_cm)
-    return place
